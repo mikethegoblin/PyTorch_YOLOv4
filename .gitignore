@@ -1,0 +1,6 @@
+__pycache__
+coco/
+zero-waste-1/
+runs/
+wandb/
+weights/

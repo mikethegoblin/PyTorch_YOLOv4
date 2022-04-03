@@ -1,7 +1,7 @@
-numpy == 1.17
+numpy
 opencv-python >= 4.1
-torch == 1.6
-torchvision
+torch == 1.11.0
+torchvision == 0.12.0
 matplotlib
 pycocotools
 tqdm

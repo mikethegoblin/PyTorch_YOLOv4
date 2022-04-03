@@ -93,6 +93,11 @@ def test(data,
     except ImportError:
         log_imgs = 0
 
+    if wandb and wandb.run is None:
+        wandb_run = wandb.init(config=opt, 
+                               project='YOLOv4_test' if opt.project == 'runs/test' else Path(opt.project).stem,
+                               name=save_dir.stem)
+
     # Dataloader
     if not training:
         img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
@@ -160,9 +165,10 @@ def test(data,
 
             # W&B logging
             if plots and len(wandb_images) < log_imgs:
+                # print('length of names is', len(names))
                 box_data = [{"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
                              "class_id": int(cls),
-                             "box_caption": "%s %.3f" % (names[cls], conf),
+                             "box_caption": "%s %.3f" % (names[int(cls)], conf),
                              "scores": {"class_score": conf},
                              "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
                 boxes = {"predictions": {"box_data": box_data, "class_labels": names}}
@@ -246,6 +252,8 @@ def test(data,
 
     # Print results per class
     if verbose and nc > 1 and len(stats):
+        # class_report = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Targets', 'P', 'R', 'AP50', 'AP@.5:.95')
+        # print(class_report)
         for i, c in enumerate(ap_class):
             print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
@@ -257,7 +265,7 @@ def test(data,
     # Save JSON
     if save_json and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
-        anno_json = glob.glob('../coco/annotations/instances_val*.json')[0]  # annotations json
+        anno_json = glob.glob('zero-waste-1/annotations/instances_val*.json')[0]  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
         print('\nEvaluating pycocotools mAP... saving %s...' % pred_json)
         with open(pred_json, 'w') as f:
@@ -311,7 +319,7 @@ if __name__ == '__main__':
     parser.add_argument('--cfg', type=str, default='cfg/yolov4.cfg', help='*.cfg path')
     parser.add_argument('--names', type=str, default='data/coco.names', help='*.cfg path')
     opt = parser.parse_args()
-    opt.save_json |= opt.data.endswith('coco.yaml')
+    opt.save_json |= opt.data.endswith('data.yaml')
     opt.data = check_file(opt.data)  # check file
     print(opt)
 
