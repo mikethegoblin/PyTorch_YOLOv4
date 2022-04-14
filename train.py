@@ -32,6 +32,7 @@ from utils.google_utils import attempt_download
 from utils.loss import compute_loss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first
+from utils.utils import rand_bbox
 
 logger = logging.getLogger(__name__)
 
@@ -284,8 +285,30 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # Forward
             with amp.autocast(enabled=cuda):
-                pred = model(imgs)  # forward
-                loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
+                # perform cutmix augmentation
+                if model.module_defs['cutmix'] == 1:
+                    cutmix_prob = model.module_defs['cutmix_prob']
+                    r = np.random.rand(1)
+                    if r < cutmix_prob:
+                        lam = np.random.beta(1,1)
+                        rand_index = torch.randperm(imgs.size()[0]).cuda()
+                        target_a = targets
+                        target_b = targets[rand_index]
+                        bbx1, bby1, bbx2, bby2 = rand_bbox(imgs.size(), lam)
+                        imgs[:, :, bbx1:bbx2, bby1:bby2] = imgs[rand_index, :, bbx1:bbx2, bby1:bby2]
+                        # adjust lambda to exactly match pixel ratio
+                        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (imgs.size()[-1] * imgs.size()[-2]))
+                        pred = model(imgs)
+                        loss_a, loss_a_items = compute_loss(pred, target_a.to(device), model)
+                        loss_b, loss_b_items = compute_loss(pred, target_b.to(device), model)
+                        loss = loss_a * lam + loss_b * (1. - lam)
+                        loss_items = np.mean(loss_a_items + loss_b_items, axis=0)
+                    else:
+                        pred = model(imgs)  # forward
+                        loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
+                else:
+                    pred = model(imgs)  # forward
+                    loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
                 if rank != -1:
                     loss *= opt.world_size  # gradient averaged between devices in DDP mode
 
