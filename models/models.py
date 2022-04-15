@@ -93,7 +93,11 @@ def create_modules(module_defs, img_size, cfg):
                 
         elif mdef['type'] == 'dropout':
             p = mdef['probability']
-            modules = nn.Dropout(p)
+            if mdef['dropblock']:
+                block_size = mdef['block_size_abs']
+                modules = DropBlock2D(block_size=block_size, drop_prob=p)
+            else:
+                modules = nn.Dropout(p)
 
         elif mdef['type'] == 'avgpool':
             modules = GAP()
