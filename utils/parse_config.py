@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from utils.utils import isfloat
 
 
 def parse_model_cfg(path):
@@ -34,6 +35,8 @@ def parse_model_cfg(path):
                 val = val.strip()
                 if val.isnumeric():  # return int or float
                     mdefs[-1][key] = int(val) if (int(val) - float(val)) == 0 else float(val)
+                elif isfloat(val):
+                    mdefs[-1][key] = float(val)
                 else:
                     mdefs[-1][key] = val  # return string
 

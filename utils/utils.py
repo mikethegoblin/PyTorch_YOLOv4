@@ -173,6 +173,13 @@ def rand_bbox(size, lam):
 
     return bbx1, bby1, bbx2, bby2
 
+def isfloat(val):
+    try:
+        float(val)
+        return True
+    except ValueError:
+        return False
+
 
 def clip_coords(boxes, img_shape):
     # Clip bounding xyxy bounding boxes to image shape (height, width)

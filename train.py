@@ -72,6 +72,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     test_path = data_dict['val']
     nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
     assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
+    print(f'nc = {nc}')
+    print(f'length of names = {len(names)}')
 
     # Model
     pretrained = weights.endswith('.pt')
@@ -286,8 +288,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             # Forward
             with amp.autocast(enabled=cuda):
                 # perform cutmix augmentation
-                if model.module_defs['cutmix'] == 1:
-                    cutmix_prob = model.module_defs['cutmix_prob']
+                if model.module_defs[0]['cutmix']:
+                    cutmix_prob = model.module_defs[0]['cutmix_prob']
                     r = np.random.rand(1)
                     if r < cutmix_prob:
                         lam = np.random.beta(1,1)
@@ -302,7 +304,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                         loss_a, loss_a_items = compute_loss(pred, target_a.to(device), model)
                         loss_b, loss_b_items = compute_loss(pred, target_b.to(device), model)
                         loss = loss_a * lam + loss_b * (1. - lam)
-                        loss_items = np.mean(loss_a_items + loss_b_items, axis=0)
+                        loss_items = (loss_a_items + loss_b_items) / 2
                     else:
                         pred = model(imgs)  # forward
                         loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size

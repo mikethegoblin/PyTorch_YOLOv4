@@ -10,13 +10,13 @@ def create_modules(module_defs, img_size, cfg):
     # Constructs module list of layer blocks from module configuration in module_defs
 
     img_size = [img_size] * 2 if isinstance(img_size, int) else img_size  # expand if necessary
-    _ = module_defs.pop(0)  # cfg training hyperparams (unused)
+    # _ = module_defs.pop(0)  # cfg training hyperparams (unused)
     output_filters = [3]  # input channels
     module_list = nn.ModuleList()
     routs = []  # list of layers which rout to deeper layers
     yolo_index = -1
 
-    for i, mdef in enumerate(module_defs):
+    for i, mdef in enumerate(module_defs, start=-1):
         modules = nn.Sequential()
 
         if mdef['type'] == 'convolutional':
@@ -248,8 +248,9 @@ def create_modules(module_defs, img_size, cfg):
             print('Warning: Unrecognized Layer Type: ' + mdef['type'])
 
         # Register module list and number of output filters
-        module_list.append(modules)
-        output_filters.append(filters)
+        if i >= 0:
+            module_list.append(modules)
+            output_filters.append(filters)
 
     routs_binary = [False] * (i + 1)
     for i in routs:
@@ -316,7 +317,6 @@ class YOLOLayer(nn.Module):
             bs, _, ny, nx = p.shape  # bs, 255, 13, 13
             if (self.nx, self.ny) != (nx, ny):
                 self.create_grids((nx, ny), p.device)
-
         # p.view(bs, 255, 13, 13) -- > (bs, 3, 13, 13, 85)  # (bs, anchors, grid, grid, classes + xywh)
         p = p.view(bs, self.na, self.no, self.ny, self.nx).permute(0, 1, 3, 4, 2).contiguous()  # prediction
 

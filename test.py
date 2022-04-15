@@ -171,7 +171,8 @@ def test(data,
                              "box_caption": "%s %.3f" % (names[int(cls)], conf),
                              "scores": {"class_score": conf},
                              "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
-                boxes = {"predictions": {"box_data": box_data, "class_labels": names}}
+                class_labels = names if isinstance(names, dict) else dict(zip([*range(len(names))], names))
+                boxes = {"predictions": {"box_data": box_data, "class_labels": class_labels}}
                 wandb_images.append(wandb.Image(img[si], boxes=boxes, caption=path.name))
 
             # Clip boxes to image bounds
@@ -242,7 +243,7 @@ def test(data,
         nt = torch.zeros(1)
 
     # W&B logging
-    if plots and wandb:
+    if plots and wandb and not training: # only log when test is directly called
         wandb.log({"Images": wandb_images})
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
@@ -265,7 +266,7 @@ def test(data,
     # Save JSON
     if save_json and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
-        anno_json = glob.glob('zero-waste-1/annotations/instances_val*.json')[0]  # annotations json
+        anno_json = glob.glob('zero-waste-1/annotations/labels.json')[0]  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
         print('\nEvaluating pycocotools mAP... saving %s...' % pred_json)
         with open(pred_json, 'w') as f:
