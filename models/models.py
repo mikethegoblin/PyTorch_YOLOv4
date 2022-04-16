@@ -94,7 +94,7 @@ def create_modules(module_defs, img_size, cfg):
         elif mdef['type'] == 'dropout':
             p = mdef['probability']
             if mdef['dropblock']:
-                block_size = mdef['block_size_abs']
+                block_size = mdef['dropblock_size_abs']
                 modules = DropBlock2D(block_size=block_size, drop_prob=p)
             else:
                 modules = nn.Dropout(p)
