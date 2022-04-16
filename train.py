@@ -72,8 +72,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     test_path = data_dict['val']
     nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
     assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
-    print(f'nc = {nc}')
-    print(f'length of names = {len(names)}')
+    # print(f'nc = {nc}')
+    # print(f'length of names = {len(names)}')
 
     # Model
     pretrained = weights.endswith('.pt')
@@ -182,7 +182,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
-                                            hyp=hyp, augment=True, cache=opt.cache_images, rect=opt.rect,
+                                            hyp=hyp, augment=False, cache=opt.cache_images, rect=opt.rect,
                                             rank=rank, world_size=opt.world_size, workers=opt.workers)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
@@ -288,29 +288,28 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             # Forward
             with amp.autocast(enabled=cuda):
                 # perform cutmix augmentation
-                if model.module_defs[0]['cutmix']:
-                    cutmix_prob = model.module_defs[0]['cutmix_prob']
-                    r = np.random.rand(1)
-                    if r < cutmix_prob:
-                        lam = np.random.beta(1,1)
-                        rand_index = torch.randperm(imgs.size()[0]).cuda()
-                        target_a = targets
-                        target_b = targets[rand_index]
-                        bbx1, bby1, bbx2, bby2 = rand_bbox(imgs.size(), lam)
-                        imgs[:, :, bbx1:bbx2, bby1:bby2] = imgs[rand_index, :, bbx1:bbx2, bby1:bby2]
-                        # adjust lambda to exactly match pixel ratio
-                        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (imgs.size()[-1] * imgs.size()[-2]))
-                        pred = model(imgs)
-                        loss_a, loss_a_items = compute_loss(pred, target_a.to(device), model)
-                        loss_b, loss_b_items = compute_loss(pred, target_b.to(device), model)
-                        loss = loss_a * lam + loss_b * (1. - lam)
-                        loss_items = (loss_a_items + loss_b_items) / 2
-                    else:
-                        pred = model(imgs)  # forward
-                        loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
-                else:
-                    pred = model(imgs)  # forward
-                    loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
+                # if model.module_defs[0].get('cutmix', None):
+                #     cutmix_prob = model.module_defs[0]['cutmix_prob']
+                #     r = np.random.rand(1)
+                #     if r < cutmix_prob:
+                #         lam = np.random.beta(1,1)
+                #         rand_index = torch.randperm(imgs.size()[0]).cuda()
+                #         target_a = targets
+                #         target_b = targets[rand_index]
+                #         bbx1, bby1, bbx2, bby2 = rand_bbox(imgs.size(), lam)
+                #         imgs[:, :, bbx1:bbx2, bby1:bby2] = imgs[rand_index, :, bbx1:bbx2, bby1:bby2]
+                #         # adjust lambda to exactly match pixel ratio
+                #         lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (imgs.size()[-1] * imgs.size()[-2]))
+                #         pred = model(imgs)
+                #         loss_a, loss_a_items = compute_loss(pred, target_a.to(device), model)
+                #         loss_b, loss_b_items = compute_loss(pred, target_b.to(device), model)
+                #         loss = loss_a * lam + loss_b * (1. - lam)
+                #         loss_items = (loss_a_items + loss_b_items) / 2
+                #     else:
+                #         pred = model(imgs)  # forward
+                #         loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
+                pred = model(imgs)  # forward
+                loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
                 if rank != -1:
                     loss *= opt.world_size  # gradient averaged between devices in DDP mode
 
