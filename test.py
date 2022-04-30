@@ -266,8 +266,26 @@ def test(data,
     # Save JSON
     if save_json and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
-        anno_json = glob.glob('zero-waste-1/annotations/labels.json')[0]  # annotations json
+        anno_json = glob.glob('zero-waste-10/test/_annotations.coco.json')[0]  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
+
+        f_obj = open(anno_json)
+        gT_dict = json.load(f_obj)
+        converer_dict = gT_dict["images"]
+        suffix = converer_dict[0]["file_name"].split('.')[-1]
+        for i in range(len(jdict)):
+            image_id = jdict[i]['image_id'] + "." + suffix
+            if not image_id.isnumeric():
+                flag = True # Mark as incorrect image_id
+            for item in converer_dict:
+                # If we found a match, and the current image_id is marked as incorrect format ==> We will correct it
+                if flag and image_id == item["file_name"]:
+                    # print(f"jdict[i]['image_id']: {jdict[i]['image_id']}, item['id']: {item['id']}")
+                    jdict[i]['image_id'] = int(item['id'])
+            # modify category ids in pred_json
+            jdict[i]['category_id'] = jdict[i]['category_id'] + 1
+        f_obj.close()
+
         print('\nEvaluating pycocotools mAP... saving %s...' % pred_json)
         with open(pred_json, 'w') as f:
             json.dump(jdict, f)
