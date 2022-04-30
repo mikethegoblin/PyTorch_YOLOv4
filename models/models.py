@@ -100,6 +100,8 @@ def create_modules(module_defs, img_size, cfg):
             if mdef['dropblock']:
                 block_size = mdef['dropblock_size_abs']
                 modules = DropBlock2D(block_size=block_size, drop_prob=p)
+            elif mdef['spatial']:
+                modules = Spatial_Dropout(p)
             else:
                 modules = nn.Dropout(p)
 
